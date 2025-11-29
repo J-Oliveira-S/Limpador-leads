@@ -1,18 +1,35 @@
 import streamlit as st
 import pandas as pd
 from io import StringIO
-from datetime import date
+from datetime import date, datetime # Import ajustado para pegar hora e data
 
 # --- Configuração da Página ---
 st.set_page_config(page_title="SDR Helper - ITECA", page_icon="🎯", layout="wide")
 
+# --- LÓGICA DE SAUDAÇÃO (O Toque Especial) ---
+def get_saudacao():
+    hora_atual = datetime.now().hour
+    
+    # Imagens do Unsplash (Links diretos)
+    if 5 <= hora_atual < 12:
+        return "Bom dia, time! Vamos pra cima! ☀️", "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=800&q=80"
+    elif 12 <= hora_atual < 18:
+        return "Boa tarde! Foco total nos resultados! 🚀", "https://images.unsplash.com/photo-1595113316349-9fa4eb24f884?w=800&q=80"
+    else:
+        return "Boa noite! Ótimo descanso ou bom final de turno! 🌙", "https://images.unsplash.com/photo-1532074205216-d0e1f4b87368?w=800&q=80"
+
+frase, imagem_url = get_saudacao()
+
+# --- TÍTULO E IMAGEM ---
+st.image(imagem_url, height=150) # Imagem de cabeçalho
 st.title("🎯 Processador de Leads - ITECA")
-st.markdown("### Cole os dados brutos e copie a linha perfeita para o CRM.")
+st.markdown(f"### {frase}")
+st.caption("Cole os dados brutos da IA e copie a linha perfeita para o CRM.")
 
 # --- BARRA LATERAL (Inputs Fixos) ---
 st.sidebar.header("1. Dados da Carga")
 
-col_bni_chapter = st.sidebar.text_input("BNI Chapter", value="BNI Collaboration") # Coloquei um valor padrão para teste
+col_bni_chapter = st.sidebar.text_input("BNI Chapter", value="BNI Collaboration") 
 col_address = st.sidebar.text_input("Address", value="Kovens Conference Center 3000 NE 151 St")
 col_contact = st.sidebar.date_input("Contact Date", value=date.today())
 col_sales_exec = st.sidebar.text_input("Sales Executive", value="Gabriel Khalil")
@@ -21,8 +38,8 @@ col_sdr = st.sidebar.text_input("SDR Owner", value="Jonathan Oliveira")
 st.sidebar.markdown("---")
 st.sidebar.caption("A coluna 'Status' será gerada em branco.")
 
-# --- ÁREA DE PROMPT ---
-with st.expander("📋 Copiar Prompt para a IA (Obrigatório)"):
+# --- ÁREA DE PROMPT (Escondida) ---
+with st.expander("🤫 Clique aqui para ver o Prompt Secreto (Obrigatório)"):
     st.code("""
     Organize os dados abaixo.
     Formato: CSV.
@@ -45,6 +62,7 @@ if st.button("⚡ Gerar Linhas do CRM"):
 
             # Blindagem: Pega apenas as 4 primeiras colunas e remove linhas de título se houver
             df_input = df_input.iloc[:, :4]
+            # Verifica se a primeira célula parece um cabeçalho e remove
             if str(df_input.iloc[0, 0]).lower() in ['name', 'nome', 'member name']:
                 df_input = df_input.iloc[1:]
             
@@ -53,7 +71,6 @@ if st.button("⚡ Gerar Linhas do CRM"):
                 df_input[df_input.shape[1]] = "N/A"
 
             # 2. CRIAÇÃO DO DATAFRAME FINAL 
-            # (Mudança aqui: Criamos primeiro os dados variáveis para definir o tamanho da tabela)
             df_final = pd.DataFrame()
             
             # Primeiro: Dados que variam por linha (Vindos da IA)
@@ -62,8 +79,7 @@ if st.button("⚡ Gerar Linhas do CRM"):
             df_final['Profession'] = df_input.iloc[:, 2]
             df_final['Phone'] = df_input.iloc[:, 3]
 
-            # Segundo: Agora que a tabela tem linhas, injetamos os dados fixos (SideBar)
-            # O Pandas vai repetir esses valores para todas as linhas automaticamente
+            # Segundo: Injetamos os dados fixos (SideBar)
             df_final['BNI Chapter'] = col_bni_chapter
             df_final['Address'] = col_address
             df_final['Contact'] = col_contact.strftime('%m/%d/%Y')
@@ -74,7 +90,7 @@ if st.button("⚡ Gerar Linhas do CRM"):
             # Limpeza de espaços
             df_final = df_final.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
 
-            # 3. REORGANIZAÇÃO VISUAL (Para ficar na ordem do Google Sheets)
+            # 3. REORGANIZAÇÃO VISUAL (Ordem do Google Sheets)
             colunas_ordenadas = [
                 'BNI Chapter', 
                 'Address', 
@@ -92,7 +108,7 @@ if st.button("⚡ Gerar Linhas do CRM"):
             # 4. EXIBIÇÃO E DOWNLOAD
             st.success(f"✅ {len(df_final)} leads processados! Copie abaixo:")
             
-            # Mostra a tabela para você conferir se o BNI Chapter apareceu
+            # Mostra a tabela para conferência
             st.dataframe(df_final, hide_index=True)
 
             # Gera o texto para copiar (Separado por TAB)
